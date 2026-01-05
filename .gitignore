@@ -1,0 +1,11 @@
+# secret
+.env
+
+# macOS
+.DS_Store
+
+# rust
+/target
+
+# node
+node_modules

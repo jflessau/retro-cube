@@ -1,0 +1,7 @@
+set dotenv-load := true
+
+deploy:
+    @echo 'This is another recipe.'
+    docker build --progress=plain -t retro-cube-os . && docker run --rm -v "$(pwd)/build:/output" retro-cube-os
+    ssh "$PI_USER@$PI_IP" 'rm /home/pi/os || true'
+    scp build/os "$PI_USER@$PI_IP:/home/pi/os"
