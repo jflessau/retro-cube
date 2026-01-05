@@ -1,116 +1,64 @@
-// mod message;
-mod state;
-// mod weather;
-#[cfg(feature = "pi")]
-use anyhow::Result;
+use display_interface_i2c::I2CInterface;
+use display_interface_spi::SPIInterface;
 use embedded_graphics::{
-    draw_target::DrawTarget,
     pixelcolor::{BinaryColor, Rgb888},
     prelude::*,
+    primitives::{Circle, PrimitiveStyle},
 };
+use rppal::i2c::I2c;
+use ssd1306::{Ssd1306, prelude::*};
 
-#[cfg(feature = "simulator")]
-use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-    sdl2::Keycode,
-};
-use log::info;
-use panic_semihosting as _;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting SSD1306 SPI example...");
+    let spi = Spi::new(
+        Spi::BUS_0, // SPI0
+        SlaveSelect::Cs0,
+        9_000_000, // 9MHz
+        8,         // 8 bits per word
+    )
+    .expect("Failed to open SPI bus.");
+    println!("SPI bus opened.");
 
-#[cfg(feature = "pi")]
-use ssd1309::prelude::*;
-#[cfg(feature = "simulator")]
-use state::Event;
+    let di = SPIInterface::new(
+        spi,
+        Pin::new(25)?, // DC pin (GPIO 25)
+        Pin::new(24)?, // RST pin (GPIO 24)
+    );
+    println!("SPI interface created.");
 
-fn main() {
-    // setup logging
+    let mut disp =
+        Ssd1306::new(di, DisplaySize128x64, DisplayRotation::Rotate0).into_buffered_graphics_mode();
+    println!("SSD1306 display object created.");
 
-    dotenv::dotenv().ok();
-    env_logger::init();
-    info!("start");
-
-    // start on simulator or hardware
-
-    #[cfg(feature = "simulator")]
-    simulate();
-
-    #[cfg(not(feature = "simulator"))]
-    run();
-}
-
-#[cfg(feature = "simulator")]
-fn simulate() {
-    info!("start simulator");
-
-    let mut display: SimulatorDisplay<_> =
-        SimulatorDisplay::<BinaryColor>::new(Size::new(128, 64)).into();
-
-    let output_settings = OutputSettingsBuilder::new()
-        .theme(BinaryColorTheme::Custom {
-            color_off: Rgb888::BLACK,
-            color_on: Rgb888::GREEN,
-        })
-        .build();
-    let mut window = Window::new("Click to move circle", &output_settings);
-
-    let mut state = state::State::new();
-
-    'running: loop {
-        display.clear(BinaryColor::Off);
-
-        state.update(&mut display, Event::Tick);
-        window.update(&mut display);
-
-        for event in window.events() {
-            match event {
-                SimulatorEvent::Quit => break 'running,
-                SimulatorEvent::KeyDown { keycode, .. } => {
-                    match keycode {
-                        Keycode::Up => state.update(&mut display, Event::NavigateUp),
-                        Keycode::Down => state.update(&mut display, Event::NavigateDown),
-                        _ => {}
-                    };
-                }
-                _ => {}
-            }
-        }
+    if let Err(err) = disp.init() {
+        panic!("Failed to initialize display: {err:#?}");
     }
-}
 
-#[cfg(feature = "pi")]
-fn run() -> Result<()> {
-    use display_interface_i2c::I2CInterface;
-    use embedded_graphics::{
-        mono_font::{MonoTextStyle, ascii::FONT_6X10},
-        pixelcolor::BinaryColor,
-        prelude::*,
-        text::Text,
-    };
-    use linux_embedded_hal::I2cdev;
-    use ssd1309::{Builder, mode::GraphicsMode};
+    // Clear internal buffer
+    disp.clear(Rgb888::BLACK.into())
+        .expect("Failed to clear display buffer");
+    println!("Display initialized and buffer cleared.");
 
-    // Open I2C bus (typically /dev/i2c-1 on Raspberry Pi)
-    let i2c = I2cdev::new("/dev/i2c-1")?;
+    // Simple 1‑px outline circle, centered roughly in the display
+    let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
+    Circle::new(Point::new(32, 8), 24) // top‑left, diameter 24
+        .into_styled(style)
+        .draw(&mut disp)
+        .expect("Failed to draw circle");
+    println!("Circle drawn to buffer.");
 
-    // Create display interface
-    let interface = I2CInterface::new(i2c, 0x3C, 0x40);
-
-    // Initialize display in graphics mode
-    let mut display: GraphicsMode<_> = Builder::new().connect(interface).into();
-
-    // Reset (if you have GPIO for reset pin)
-    // display.reset(&mut reset_pin, &mut delay)?;
-
-    // Initialize the display
-    display.init()?;
-    display.flush()?;
-
-    // Draw text
-    let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
-    Text::new("Hello OLED!", Point::new(0, 10), style).draw(&mut display)?;
-
-    // Update display
-    display.flush()?;
+    disp.flush().expect("Failed to flush display");
+    println!("Display buffer flushed to screen.");
 
     Ok(())
 }
+
+// println!("Starting SSD1306 example...");
+// let mut i2c = I2c::new()?;
+// println!("I2C bus opened.");
+// i2c.set_slave_address(0x3c)
+//     .expect("Failed to set I2C slave address.");
+// println!("I2C slave address set to 0x3c.");
+
+// let di = I2CInterface::new(i2c, 0x3c, 0x40);
+// println!("I2C interface created.");

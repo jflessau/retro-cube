@@ -19,7 +19,7 @@ COPY src ./src
 COPY .cargo ./.cargo
 
 # build for ARMv7
-RUN cargo build --no-default-features -F pi --release --target=armv7-unknown-linux-gnueabihf
+RUN cargo build --release --target=armv7-unknown-linux-gnueabihf
 
 # prepare output
 RUN mkdir -p /output

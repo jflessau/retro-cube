@@ -4,23 +4,12 @@ A 3D printable cube housing a raspberry pi zero W, an OLED display, buttons, a d
 
 ## Features
 
-Use the dial to switch between the views.
+Use the dial to switch between the views:
 
-### Voice Mail
-
-Send, receive and listen to voice mails sent by other retro-cube users over WiFi.
-
-### Countdown
-
-Start and watch a countdown timer.
-
-### Clock
-
-Display the current time and set an alarm.
-
-### Weather
-
-Display the current weather for your location.
+- **Voice Mail** - Send, receive and listen to voice mails sent by other retro-cube users over WiFi
+- **Countdown** - Start and watch a countdown timer
+- **Clock** - Display the current time and set an alarm
+- **Weather** - Display the current weather for your location
 
 ## Development
 
