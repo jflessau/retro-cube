@@ -1,5 +1,5 @@
 pub mod event;
-// use crate::{message, weather};
+use crate::{message, weather};
 use anyhow::Result;
 pub use event::Event;
 mod view;
@@ -20,6 +20,7 @@ use view::View;
 pub struct State {
     view: View,
     last_fetch: Option<DateTime<Utc>>,
+    sleep: bool,
 
     time: NaiveTime,
 
@@ -39,6 +40,7 @@ impl State {
         State {
             view: View::Clock,
             last_fetch: None,
+            sleep: false,
 
             time: Utc::now().time(),
 
@@ -55,52 +57,51 @@ impl State {
     }
 
     pub fn fetch(&mut self) {
-        return;
+        if self
+            .last_fetch
+            .map(|t| Utc::now().signed_duration_since(t).num_minutes() > 5)
+            .unwrap_or(true)
+        {
+            info!("fetch data...");
+            self.last_fetch = Some(Utc::now());
 
-        // if self
-        //     .last_fetch
-        //     .map(|t| Utc::now().signed_duration_since(t).num_minutes() > 5)
-        //     .unwrap_or(true)
-        // {
-        //     info!("fetch data...");
-        //     self.last_fetch = Some(Utc::now());
+            // weather
 
-        //     // weather
+            match weather::fetch() {
+                Ok(w) => {
+                    self.temperature = w.temperature;
+                    self.relative_humidity_percent = w.relative_humidity_percent as f32;
+                    self.surface_pressure_hpa = w.surface_pressure_hpa;
+                    self.wind_speed_km_h = w.wind_speed_km_h;
+                    self.wind_direction_deg = w.wind_direction_deg as i32;
+                    self.rain_in_x_hours = w.rain_in_x_hours;
+                }
+                Err(err) => {
+                    error!("failed to fetch weather data: {err:?}");
+                }
+            }
 
-        //     match weather::fetch() {
-        //         Ok(w) => {
-        //             self.temperature = w.temperature;
-        //             self.relative_humidity_percent = w.relative_humidity_percent as f32;
-        //             self.surface_pressure_hpa = w.surface_pressure_hpa;
-        //             self.wind_speed_km_h = w.wind_speed_km_h;
-        //             self.wind_direction_deg = w.wind_direction_deg as i32;
-        //             self.rain_in_x_hours = w.rain_in_x_hours;
-        //         }
-        //         Err(err) => {
-        //             error!("failed to fetch weather data: {err:?}");
-        //         }
-        //     }
+            // message
 
-        //     // message
+            match message::fetch() {
+                Ok(msg) => self.message = Some(msg),
+                Err(err) => error!("failed to fetch message data: {err:?}"),
+            }
 
-        //     match message::fetch() {
-        //         Ok(msg) => self.message = Some(msg),
-        //         Err(err) => error!("failed to fetch message data: {err:?}"),
-        //     }
-
-        //     return;
-        // }
+            return;
+        }
     }
 
     pub fn update<D>(&mut self, display: &mut D, event: Event)
     where
         D: DrawTarget<Color = BinaryColor>,
+        D::Error: Send + Sync + core::fmt::Debug + 'static,
     {
         match event {
             Event::Tick => {
-                std::thread::sleep(std::time::Duration::from_millis(20));
+                std::thread::sleep(std::time::Duration::from_millis(10));
                 self.time = Utc::now().time();
-                // self.fetch();
+                self.fetch();
 
                 if let Err(err) = self.render(display) {
                     error!("renderer failed: {err:?}");
@@ -114,23 +115,37 @@ impl State {
                 self.view = self.view.previous();
                 self.current_letter = (0, Utc::now());
             }
+            Event::ToggleSleep => {
+                info!("toggle sleep mode");
+                self.sleep = !self.sleep;
+            }
         }
     }
 
     fn render<D>(&mut self, display: &mut D) -> Result<()>
     where
         D: DrawTarget<Color = BinaryColor>,
+        D::Error: Send + Sync + core::fmt::Debug + 'static,
     {
+        if self.sleep {
+            display
+                .clear(BinaryColor::Off)
+                .map_err(|e| anyhow::anyhow!("clear failed: {:?}", e))?;
+            return Ok(());
+        }
+
         match &self.view {
             View::Clock => {
                 // frame
 
                 Rectangle::new(Point::new(0, 0), Size::new(128, 64))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
                 Rectangle::new(Point::new(4, 4), Size::new(120, 56))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 // text
 
@@ -140,7 +155,8 @@ impl State {
                     Point::new(32, 16),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 let time = format!("{}", Utc::now().time().format("%H:%M"));
                 Text::new(
@@ -148,7 +164,8 @@ impl State {
                     Point::new(40, 35),
                     MonoTextStyle::new(&FONT_9X15_BOLD, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 // second indicator
 
@@ -157,22 +174,26 @@ impl State {
                 let height = 1;
                 Line::new(start, Point::new(start.x + length, start.y))
                     .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, height))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
                 let seconds = (Utc::now().second() + 1) as f32 / 60.0;
                 let x = start.x + (length as f32 * seconds) as i32;
                 Circle::with_center(Point::new(x, start.y), height + 4)
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
             }
             View::Weather => {
                 // frame
 
                 Rectangle::new(Point::new(0, 0), Size::new(128, 64))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
                 Rectangle::new(Point::new(2, 2), Size::new(124, 60))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 let x = 6;
                 let row_one_y = 12;
@@ -188,7 +209,8 @@ impl State {
                     Point::new(x, row_one_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
                     &format!(
@@ -209,18 +231,21 @@ impl State {
                     Point::new(x, row_two_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Line::new(Point::new(x, row_two_y + 8), Point::new(120, row_two_y + 8))
                     .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
                     &format!("Precipitation:"),
                     Point::new(x, row_three_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
                     &format!(
@@ -233,17 +258,20 @@ impl State {
                     Point::new(x, row_four_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
             }
             View::Mailbox => {
                 // frame
 
                 Rectangle::new(Point::new(0, 0), Size::new(128, 8))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
                 Rectangle::new(Point::new(0, 56), Size::new(128, 8))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 // text
 
@@ -268,20 +296,23 @@ impl State {
                     Point::new(6, 26),
                     MonoTextStyle::new(&FONT_9X15_BOLD, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
                     text_slice,
                     Point::new(6, 44),
                     MonoTextStyle::new(&FONT_9X15_BOLD, BinaryColor::On),
                 )
-                .draw(display);
+                .draw(display)
+                .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 // cutoff
 
                 Rectangle::new(Point::new(122, 32), Size::new(128, 15))
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
-                    .draw(display);
+                    .draw(display)
+                    .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
             }
         }
 

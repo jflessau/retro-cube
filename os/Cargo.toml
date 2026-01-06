@@ -4,36 +4,27 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# utilities
 anyhow = "1.0.100"
 chrono = "0.4.42"
 dotenv = "0.15.0"
-embedded-graphics-simulator = "0.8.0"
+
 env_logger = "0.11.8"
 log = "0.4.29"
-# reqwest = { version = "0.12", default-features = false , features = ["json", "blocking", "rustls-tls"] }
+reqwest = { version = "0.13", default-features = false , features = ["json", "blocking", "rustls"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.148"
-tinybmp = "0.6.0"
-tinytga = "0.5.0"
 
-embedded-graphics = "^ 0.8"
-panic-semihosting = "^ 0.6"
-ssd1309 = { git = "https://github.com/brel-ge/ssd1309.git", branch = "master" }
+# graphics
+embedded-graphics = "0.8.1"
+embedded-graphics-simulator = {version = "0.8.0", optional = true }
 
-linux-embedded-hal = { version = "0.4.1", optional = true }
-display-interface-spi = {version = "0.4", optional = true }
-rppal = { version = "0.22.1", optional = true }
-embedded-hal = { version = "1.0", optional = true }
-
-
-# stm32f1xx-hal = { version = "0.10", features = [ "rt", "stm32f103" ], optional = true }
-
-# cortex-m-rt = { version = "0.7", optional = true }
-# embedded-hal = { version = "1.0.0", optional = true }
-# cortex-m = { version = "0.7", optional = true }
-display-interface-i2c = {version = "^ 0.4", optional = true }
+# OLED display
+rppal = { version = "0.22", features = ["hal"], optional =  true }
+ssd1309 = { version = "=0.4.0", optional = true }
+display-interface-spi = { version = "=0.4.1", optional = true }
+ctrlc = "3.5.1"
 
 [features]
-default = ["simulator"]
-simulator = []
-pi = ["rppal", "embedded-hal", "display-interface-spi", "linux-embedded-hal", "display-interface-i2c"]
+default = ["embedded-graphics-simulator"]
+oled = ["rppal", "ssd1309", "display-interface-spi"]
