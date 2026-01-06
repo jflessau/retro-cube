@@ -11,6 +11,24 @@ Use the dial to switch between the views:
 - **Clock** - Display the current time and set an alarm
 - **Weather** - Display the current weather for your location
 
+## Hardware
+
+You need a raspberry pi zero W 2 and the sdd1306 OLED display.
+
+### Wiring
+
+| Pi (physical pin) | OLED Pin | Function      |
+| ----------------- | -------- | ------------- |
+| 1                 | VCC      | Power (3.3 V) |
+| 6                 | GND      | Ground        |
+| 5                 | RES      | Reset         |
+| 19                | SDA      | Data          |
+| 3                 | DC       | Data/Command  |
+| 23                | SCK      | Clock         |
+| 24                | CS       | Chip Select   |
+
+## Software
+
 ## Development
 
 Use `cargo run` to build and run the application.

@@ -1,64 +1,61 @@
-use display_interface_i2c::I2CInterface;
 use display_interface_spi::SPIInterface;
 use embedded_graphics::{
     pixelcolor::{BinaryColor, Rgb888},
     prelude::*,
     primitives::{Circle, PrimitiveStyle},
 };
-use rppal::i2c::I2c;
-use ssd1306::{Ssd1306, prelude::*};
+use rppal::{
+    gpio::Gpio,
+    spi::{Bus, Mode, SlaveSelect, Spi},
+};
+use ssd1309::{self, builder::Builder, mode::graphics::GraphicsMode};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting SSD1306 SPI example...");
+fn main() -> anyhow::Result<()> {
+    println!("Starting SSD1309 SPI example...");
+
+    // SPI0, SS0 (not Cs0), 9MHz, Mode0
     let spi = Spi::new(
-        Spi::BUS_0, // SPI0
-        SlaveSelect::Cs0,
-        9_000_000, // 9MHz
-        8,         // 8 bits per word
-    )
-    .expect("Failed to open SPI bus.");
-    println!("SPI bus opened.");
+        Bus::Spi0,
+        SlaveSelect::Ss0, // Fixed: Ss0 not Cs0
+        9_000_000,
+        Mode::Mode0,
+    )?;
 
-    let di = SPIInterface::new(
-        spi,
-        Pin::new(25)?, // DC pin (GPIO 25)
-        Pin::new(24)?, // RST pin (GPIO 24)
-    );
-    println!("SPI interface created.");
+    // GPIO pins
+    let dc = Gpio::new()?.get(2)?.into_output(); // DC (Data/Command) on BCM GPIO 2 (physical pin 3)
+    let mut res = Gpio::new()?.get(3)?.into_output(); // RES (Reset) on BCM GPIO 3 (physical pin 5)
+    let cs = Gpio::new()?.get(8)?.into_output(); // CS (Chip Select) on BCM GPIO 8 (physical pin 24)
 
-    let mut disp =
-        Ssd1306::new(di, DisplaySize128x64, DisplayRotation::Rotate0).into_buffered_graphics_mode();
-    println!("SSD1306 display object created.");
+    // SPIInterface: SPI + DC (RST manual)
+    let di = SPIInterface::new(spi, dc, cs);
 
-    if let Err(err) = disp.init() {
-        panic!("Failed to initialize display: {err:#?}");
-    }
+    let mut disp: GraphicsMode<_> = Builder::new().connect(di).into();
 
-    // Clear internal buffer
-    disp.clear(Rgb888::BLACK.into())
-        .expect("Failed to clear display buffer");
-    println!("Display initialized and buffer cleared.");
+    // Reset sequence
+    res.set_high();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    res.set_low();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    res.set_high();
+    std::thread::sleep(std::time::Duration::from_millis(10));
 
-    // Simple 1‑px outline circle, centered roughly in the display
+    disp.init().expect("Failed to initialize display");
+    println!("Display initialized.");
+
+    disp.clear();
     let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-    Circle::new(Point::new(32, 8), 24) // top‑left, diameter 24
+    Circle::new(Point::new(32, 8), 24)
         .into_styled(style)
         .draw(&mut disp)
         .expect("Failed to draw circle");
-    println!("Circle drawn to buffer.");
 
-    disp.flush().expect("Failed to flush display");
-    println!("Display buffer flushed to screen.");
+    disp.flush().expect("fails to flush");
+    println!("Circle displayed.");
+
+    std::thread::sleep(std::time::Duration::from_secs(5));
+    disp.clear();
+    disp.flush().expect("fails to flush");
+    println!("Display cleared.");
 
     Ok(())
 }
-
-// println!("Starting SSD1306 example...");
-// let mut i2c = I2c::new()?;
-// println!("I2C bus opened.");
-// i2c.set_slave_address(0x3c)
-//     .expect("Failed to set I2C slave address.");
-// println!("I2C slave address set to 0x3c.");
-
-// let di = I2CInterface::new(i2c, 0x3c, 0x40);
-// println!("I2C interface created.");

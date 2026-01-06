@@ -1,16 +1,16 @@
 FROM rust:latest
 
-# Install cross-compilation tools
-RUN dpkg --add-architecture armhf && \
+# Install cross-compilation tools for aarch64
+RUN dpkg --add-architecture arm64 && \
     apt-get update && \
-    apt-get install -y gcc-arm-linux-gnueabihf pkg-config libsdl2-dev:armhf gcc-arm-linux-gnueabihf \
+    apt-get install -y gcc-aarch64-linux-gnu pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Add the ARM target for Rust
-RUN rustup target add armv7-unknown-linux-gnueabihf
+# Add the ARM64 target for Rust
+RUN rustup target add aarch64-unknown-linux-gnu
 
-ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
-ENV PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
+ENV PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+ENV PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
 ENV PKG_CONFIG_SYSROOT_DIR=/
 
 # cache dependencies
@@ -18,11 +18,11 @@ COPY Cargo.toml Cargo.toml
 COPY src ./src
 COPY .cargo ./.cargo
 
-# build for ARMv7
-RUN cargo build --release --target=armv7-unknown-linux-gnueabihf
+# build for ARM64
+RUN cargo build --release --target=aarch64-unknown-linux-gnu
 
 # prepare output
 RUN mkdir -p /output
-RUN cp target/armv7-unknown-linux-gnueabihf/release/os ./os
+RUN cp target/aarch64-unknown-linux-gnu/release/os ./os
 
 CMD ["cp", "os", "/output/os"]
