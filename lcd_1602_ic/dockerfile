@@ -1,0 +1,36 @@
+FROM rust:latest
+
+# install system dependencies
+
+RUN dpkg --add-architecture arm64 && \
+    apt-get update && \
+    apt-get install -y gcc-aarch64-linux-gnu pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# add aarch64 target
+
+RUN rustup target add aarch64-unknown-linux-gnu
+
+# set environment variables for cross compilation
+
+ENV PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+ENV PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
+ENV PKG_CONFIG_SYSROOT_DIR=/
+
+# copy source code
+
+COPY Cargo.toml Cargo.toml
+COPY src ./src
+
+# build
+
+RUN cargo build --release --target=aarch64-unknown-linux-gnu
+
+# prepare output
+
+RUN mkdir -p /output
+RUN cp target/aarch64-unknown-linux-gnu/release/lcd ./lcd
+
+# on run, copy the built binary to output directory
+
+CMD ["cp", "lcd", "/output/lcd"]

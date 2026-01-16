@@ -64,6 +64,7 @@ impl State {
         {
             info!("fetch data...");
             self.last_fetch = Some(Utc::now());
+            return;
 
             // weather
 

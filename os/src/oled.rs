@@ -1,7 +1,7 @@
 use crate::state;
 use anyhow::Result;
 use display_interface_spi::SPIInterface;
-use log::info;
+use log::{info, trace};
 use rppal::{
     gpio::{Gpio, Level},
     spi::{Bus, Mode, SlaveSelect, Spi},
@@ -86,6 +86,8 @@ pub fn render() -> Result<()> {
 
     let mut last_nav_at = Instant::now();
     while running.load(Ordering::SeqCst) {
+        trace!("main loop tick");
+
         // detect rotary events
 
         let clk_state = rotary_clk.read();
