@@ -130,13 +130,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clear display and write message
     lcd.clear()?;
-    lcd.print("hello world")?;
-
+    lcd.print("hello")?;
     // Write to second line
     lcd.set_cursor(0, 1)?;
-    lcd.print("LCD working!")?;
-
-    println!("✅ 'hello world' written to LCD1602!");
+    // write full block character
+    lcd.write_char(0xFF)?;
 
     Ok(())
 }
