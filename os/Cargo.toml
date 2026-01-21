@@ -7,6 +7,7 @@ edition = "2024"
 # utilities
 anyhow = "1.0.100"
 chrono = "0.4.42"
+chrono-tz = "0.10"
 dotenv = "0.15.0"
 
 env_logger = "0.11.8"

@@ -1,7 +1,6 @@
 use anyhow::{Context, Result, bail};
 use chrono::{Timelike, Utc};
-use log::trace;
-use reqwest;
+use log::{debug, trace, warn};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,8 +52,30 @@ pub struct Weather {
 
 pub fn fetch() -> Result<Weather> {
     let date = Utc::now().date_naive();
+    let lat = std::env::var("WEATHER_LAT")
+        .unwrap_or_else(|_| {
+            warn!("no latitude set for fetching weather data");
+            "50.0".into()
+        })
+        .parse::<f32>()
+        .unwrap_or_else(|_| {
+            warn!("fails to parse latitude for fetching weather data");
+            50.0
+        });
+    let lon = std::env::var("WEATHER_LON")
+        .unwrap_or_else(|_| {
+            warn!("no longitude set for fetching weather data");
+            "12.0".into()
+        })
+        .parse::<f32>()
+        .unwrap_or_else(|_| {
+            warn!("fails to parse longitude for fetching weather data");
+            12.0
+        });
+
+    debug!("fetch weather for latitude: {lat}, longitude: {lon}");
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&hourly=temperature_2m,relative_humidity_2m,rain,snowfall,wind_speed_10m,wind_direction_10m,showers,surface_pressure&visibility&start_date=2026-01-04&end_date={date}"
+        "https://api.open-meteo.com/v1/forecast?latitude={lat:.2}&longitude={lon:.2}&hourly=temperature_2m,relative_humidity_2m,rain,snowfall,wind_speed_10m,wind_direction_10m,showers,surface_pressure&visibility&start_date=2026-01-04&end_date={date}"
     );
     let response = reqwest::blocking::get(url).context("fails to fetch weather data")?;
     let data: WeatherData = response.json().context("fails to parse weather data")?;
@@ -80,9 +101,6 @@ pub fn fetch() -> Result<Weather> {
         surface_pressure_hpa: data.hourly.surface_pressure[hour] as f32,
         wind_speed_km_h: data.hourly.wind_speed_10m[hour] as f32,
         wind_direction_deg: data.hourly.wind_direction_10m[hour] as f32,
-        rain_in_x_hours: match next_rain_hour {
-            Some(index) => Some(index - hour),
-            None => None,
-        },
+        rain_in_x_hours: next_rain_hour.map(|index| index - hour),
     })
 }
