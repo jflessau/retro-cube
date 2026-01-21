@@ -3,12 +3,12 @@ set dotenv-load := true
 deploy:
     @echo 'This is another recipe.'
     docker build --progress=plain -t retro-cube-os . && docker run --rm -v "$(pwd)/build:/output" retro-cube-os
-    ssh "$PI_USER@$PI_IP" 'rm /home/pi/os || true'
-    scp .env "$PI_USER@$PI_IP:/home/pi/"
-    scp build/os "$PI_USER@$PI_IP:/home/pi/os"
+    ssh "$PI_USER@$PI_IP" 'rm /home/$PI_USER/os || true'
+    scp .env "$PI_USER@$PI_IP:/home/$PI_USER/"
+    scp build/os "$PI_USER@$PI_IP:/home/$PI_USER/os"
 
 run-remote:
     @echo 'Deploy and run it on the Pi'
     just deploy
-    scp .env "$PI_USER@$PI_IP:/home/pi/"
+    scp .env "$PI_USER@$PI_IP:/home/$PI_USER/"
     ssh "$PI_USER@$PI_IP" './os'

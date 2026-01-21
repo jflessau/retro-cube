@@ -1,28 +1,33 @@
 # retro-cube
 
-A 3D printable cube housing a raspberry pi zero W, an OLED display, buttons, a dial, and a speaker.
+<img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="demo.jpeg" width="440px"/>
+
+A 3D printable housing for a Raspberry Pi Zero W, an OLED display, and a rotary encoder.
 
 ## Features
 
-Use the dial to switch between the views:
+Use the dial to switch between views:
 
-- **Voice Mail** - Send, receive and listen to voice mails sent by other retro-cube users over WiFi
-- **Countdown** - Start and watch a countdown timer
-- **Clock** - Display the current time and set an alarm
-- **Weather** - Display the current weather for your location
+- **Clock** - Current date and time
+- **Weather** - Current weather for your location
+- **Message** - Messages loaded from a basic-auth protected server
+
+The server code is also included in this repo.
 
 ## Hardware
 
-Aside from a Pi like the Raspberry Pi 3B+, you need
+Aside from a Pi Zero W2 you need:
 
-- `1x` SDD1306 OLED display, **SPI**-version, 128x64, 2.4 inch
+- `1x` SSD1306 OLED display, **SPI**-version, 128x64, 2.4 inch
 - `1x` GIAK KY-040 Rotary Encoder
-- `7x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
+- `12x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
+
+STL files for the case can be found in `./3d`. Note that you might need a little glue to properly attach the knob to the rotary encoder.
 
 ### Wiring
 
-This is for the Raspberry Pi 3B+. Other models might have a different pinout.
-Consult the manual both the PI and the OLED display for your specific Pi model.
+This is for the Raspberry Pi 3B+ and Zero 2 W. Other models might have a different pinout.
+Consult the manual for both the Pi and the OLED display for your specific Pi model.
 
 #### OLED Display
 
@@ -48,11 +53,10 @@ Consult the manual both the PI and the OLED display for your specific Pi model.
 
 ## Software
 
-### Development
+The software code running on the Pi is located in `./os`.
+The message server is located in `./server`.
 
-The software part of this project is located in `./os`.
-
-If you are just here to build the retro-cube, and don't want to tinker with the code, you can skip this section and instead download the latest release from the release page on this GitHub repository.
+### Build & Deploy to Raspberry Pi
 
 #### Requirements
 
@@ -60,26 +64,52 @@ If you are just here to build the retro-cube, and don't want to tinker with the 
 - [Just](https://github.com/casey/just) (can be installed with `cargo install just`)
 - [Docker](https://docker.com) (optional)
 
-##### MacOx
+#### Run the os service on your Pi
 
-On macOS, you likely need to install `sdl2`, e.g. with Homebrew:
+Rename `./os/.env.example` to `./os/.env` and set the following variables:
+
+| Env var                  | Description                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| PI_USER                  | Username for ssh (usually, this is just `pi`)                                   |
+| PI_IP                    | The IP address of your Pi                                                       |
+| REFETCH_INTERVAL_SECONDS | Seconds to wait between fetching weather and message data                       |
+| TIMEZONE                 | Your time zone in [IANA format](https://data.iana.org/time-zones/tzdb/zone.tab) |
+| MESSAGE_URL              | URL of the message server in `./server`                                         |
+| MESSAGE_USERNAME         | Choose a username                                                               |
+| MESSAGE_PASSWORD         | Choose a password                                                               |
+| WEATHER_LAT              | Latitude of the location to get the weather for, e.g. `50.2`                    |
+| WEATHER_LON              | Longitude of the location to get the weather for, e.g. `12.9`                   |
+
+Then run `just deploy` to build the binary and copy it to `/home/pi/os` on the Pi. Use ssh to get into the Pi and execute the os service, which should be in `/home/<your pi username>/os` by running, for example, `./home/pi/os`.
+
+If available, this will use passwordless ssh login via ssh keys. Otherwise, you will be prompted for the password.
+
+To skip the part of manually starting it on the Pi, use `just run-remote`. This will build the code, copy it to the Pi, and run it.
+
+#### Run the server
+
+The server in `./server` is used by the Pi to fetch text messages and it exposes a web form to update the message. Both endpoints are protected by basic auth.
+
+First rename `./server/.env.example` to `./server/.env` and set the following variables:
+
+| Env var       | Description                                                                  |
+| ------------- | ---------------------------------------------------------------------------- |
+| AUTH_USERNAME | Username for basic auth. Use the same here as for MESSAGE_USERNAME in `./os` |
+| AUTH_PASSWORD | Password for basic auth. Use the same here as for MESSAGE_PASSWORD in `./os` |
+
+And run the server with `cargo run`. You can also build an executable binary with `cargo build --release`, after which the binary is in `target/release/`. Or you can build a Docker container with `docker build -t retro-cube-server .`.
+
+### Development
+
+Use `cargo run` for both the os and the server to run the application on your local machine.
+
+For the os service, instead of drawing to the real OLED, this will render the OLED's content into a simulator running in a separate window.
+
+#### macOS
+
+On macOS, you likely need to install `sdl2` to run the `./os` service, e.g. with Homebrew:
 
 ```sh
 brew install sdl2
 export LIBRARY_PATH="/opt/homebrew/lib:$LIBRARY_PATH"
 ```
-
-#### Run
-
-Use `cargo run` to run the application on your local machine. Instead of drawing to the real OLED, this will render the OLED's content into a simulator running in a separate window.
-
-#### Build & Deploy to Raspberry Pi
-
-Renane `.env-example` to `.env` and set the following variables:
-
-- `PI_USER`: the username you use to ssh into the pi (usually `pi`)
-- `PI_IP`: the hostname or IP address of your pi (e.g. `192.168.189.9\*)
-
-Then run `just deploy` to build the binary and copy it to `/home/pi/os` on the Pi.
-
-If available, this will use the passwordless ssh login via ssh keys. Otherwise, you will be prompted for the password.

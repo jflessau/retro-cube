@@ -5,7 +5,14 @@
 .DS_Store
 
 # rust
-/target
+target
+
+# os
+os/target
+
+# server
+server/target
+server/*.txt
 
 # free CAD
 *.FCBak
