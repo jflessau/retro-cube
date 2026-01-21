@@ -11,6 +11,7 @@ Use the dial to switch between views:
 - **Clock** - Current date and time
 - **Weather** - Current weather for your location
 - **Message** - Messages loaded from a basic-auth protected server
+- **Night mode** - Turns the display off and since its an OLED, no light is emitted at all
 
 The server code is also included in this repo.
 
