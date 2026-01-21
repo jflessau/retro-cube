@@ -78,7 +78,6 @@ impl State {
             .parse::<i64>()
             .unwrap_or(10);
 
-        println!("{seconds_since_last_fetch}, {refetch_interval_seconds}");
         if seconds_since_last_fetch > refetch_interval_seconds {
             info!("fetch data with interval {refetch_interval_seconds} s");
             self.last_fetch = Some(Utc::now());
@@ -304,7 +303,9 @@ impl State {
                     }
                 }
 
-                let text_slice = &text[self.current_letter.0..text.len().min(20)];
+                let start = self.current_letter.0.min(text.len());
+                let end = (start + 20).min(text.len());
+                let text_slice = &text[start..end];
 
                 Text::new(
                     "Message:",
