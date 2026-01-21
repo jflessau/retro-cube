@@ -1,6 +1,6 @@
 # retro-cube
 
-<img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="demo.jpeg" width="440px"/>
+<img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="demo.jpg" width="440px"/>
 
 A 3D printable housing for a Raspberry Pi Zero W, an OLED display, and a rotary encoder.
 
