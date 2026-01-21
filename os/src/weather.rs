@@ -1,7 +1,6 @@
 use anyhow::{Context, Result, bail};
 use chrono::{Timelike, Utc};
 use log::trace;
-use reqwest;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,9 +79,6 @@ pub fn fetch() -> Result<Weather> {
         surface_pressure_hpa: data.hourly.surface_pressure[hour] as f32,
         wind_speed_km_h: data.hourly.wind_speed_10m[hour] as f32,
         wind_direction_deg: data.hourly.wind_direction_10m[hour] as f32,
-        rain_in_x_hours: match next_rain_hour {
-            Some(index) => Some(index - hour),
-            None => None,
-        },
+        rain_in_x_hours: next_rain_hour.map(|index| index - hour),
     })
 }

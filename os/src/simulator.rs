@@ -21,8 +21,7 @@ pub fn render() -> Result<()> {
     // setup simulator
 
     info!("start simulator");
-    let mut display: SimulatorDisplay<_> =
-        SimulatorDisplay::<BinaryColor>::new(Size::new(128, 64)).into();
+    let mut display: SimulatorDisplay<_> = SimulatorDisplay::<BinaryColor>::new(Size::new(128, 64));
     let output_settings = OutputSettingsBuilder::new()
         .theme(BinaryColorTheme::Custom {
             color_off: Rgb888::BLACK,
@@ -52,7 +51,7 @@ pub fn render() -> Result<()> {
         display.clear(BinaryColor::Off);
 
         state.update(&mut display, Event::Tick);
-        window.update(&mut display);
+        window.update(&display);
 
         for event in window.events() {
             match event {

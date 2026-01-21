@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use log::trace;
-use reqwest;
 use std::env;
 
 pub fn fetch() -> Result<String> {

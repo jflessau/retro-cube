@@ -1,9 +1,11 @@
 pub mod event;
+
 use crate::{message, weather};
 use anyhow::Result;
 pub use event::Event;
 mod view;
 use chrono::{DateTime, NaiveTime, Timelike, Utc};
+use chrono_tz::Tz;
 use embedded_graphics::{
     mono_font::{
         MonoTextStyle,
@@ -23,6 +25,7 @@ pub struct State {
     sleep: bool,
 
     time: NaiveTime,
+    timezone: Tz,
 
     temperature: f32,
     relative_humidity_percent: f32,
@@ -37,12 +40,20 @@ pub struct State {
 
 impl State {
     pub fn new() -> Self {
+        let timezone = std::env::var("TIMEZONE")
+            .unwrap_or("UTC".into())
+            .parse::<Tz>()
+            .unwrap_or(chrono_tz::UTC);
+
+        info!("Using timezone: {}", timezone);
+
         State {
             view: View::Clock,
             last_fetch: None,
             sleep: false,
 
             time: Utc::now().time(),
+            timezone,
 
             temperature: -0.0,
             relative_humidity_percent: 0.0,
@@ -57,14 +68,20 @@ impl State {
     }
 
     pub fn fetch(&mut self) {
-        if self
+        let seconds_since_last_fetch = self
             .last_fetch
-            .map(|t| Utc::now().signed_duration_since(t).num_minutes() > 5)
-            .unwrap_or(true)
-        {
-            info!("fetch data...");
+            .map(|t| Utc::now().signed_duration_since(t).num_seconds())
+            .unwrap_or(i64::MAX);
+
+        let refetch_interval_seconds = std::env::var("REFETCH_INTERVAL_SECONDS")
+            .unwrap_or("10".into())
+            .parse::<i64>()
+            .unwrap_or(10);
+
+        println!("{seconds_since_last_fetch}, {refetch_interval_seconds}");
+        if seconds_since_last_fetch > refetch_interval_seconds {
+            info!("fetch data with interval {refetch_interval_seconds} s");
             self.last_fetch = Some(Utc::now());
-            return;
 
             // weather
 
@@ -88,8 +105,6 @@ impl State {
                 Ok(msg) => self.message = Some(msg),
                 Err(err) => error!("failed to fetch message data: {err:?}"),
             }
-
-            return;
         }
     }
 
@@ -150,7 +165,8 @@ impl State {
 
                 // text
 
-                let date = format!("{}", Utc::now().date_naive().format("%Y-%m-%d"));
+                let local_time = Utc::now().with_timezone(&self.timezone);
+                let date = format!("{}", local_time.date_naive().format("%Y-%m-%d"));
                 Text::new(
                     &date,
                     Point::new(32, 16),
@@ -159,7 +175,7 @@ impl State {
                 .draw(display)
                 .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
-                let time = format!("{}", Utc::now().time().format("%H:%M"));
+                let time = format!("{}", local_time.time().format("%H:%M"));
                 Text::new(
                     &time,
                     Point::new(40, 35),
@@ -177,7 +193,7 @@ impl State {
                     .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, height))
                     .draw(display)
                     .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
-                let seconds = (Utc::now().second() + 1) as f32 / 60.0;
+                let seconds = (local_time.second() + 1) as f32 / 60.0;
                 let x = start.x + (length as f32 * seconds) as i32;
                 Circle::with_center(Point::new(x, start.y), height + 4)
                     .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
@@ -241,7 +257,7 @@ impl State {
                     .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
-                    &format!("Precipitation:"),
+                    "Precipitation:",
                     Point::new(x, row_three_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
@@ -249,13 +265,11 @@ impl State {
                 .map_err(|e| anyhow::anyhow!("draw failed: {:?}", e))?;
 
                 Text::new(
-                    &format!(
-                        "{}",
-                        match self.rain_in_x_hours {
-                            Some(hours) => format!("{hours}h"),
-                            None => "---".to_string(),
-                        }
-                    ),
+                    &(match self.rain_in_x_hours {
+                        Some(hours) => format!("{hours}h"),
+                        None => "---".to_string(),
+                    })
+                    .to_string(),
                     Point::new(x, row_four_y),
                     MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
                 )
@@ -290,7 +304,7 @@ impl State {
                     }
                 }
 
-                let text_slice = &text[self.current_letter.0..text.len().max(20)];
+                let text_slice = &text[self.current_letter.0..text.len().min(20)];
 
                 Text::new(
                     "Message:",

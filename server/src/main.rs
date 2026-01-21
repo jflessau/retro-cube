@@ -11,6 +11,8 @@ use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use serde::Deserialize;
 use std::{env, fs, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
+use tracing::{debug, info, warn};
+use tracing_subscriber::prelude::*;
 
 const MESSAGE_FILE: &str = "message.txt";
 const MAX_MESSAGE_LENGTH: usize = 144;
@@ -26,16 +28,15 @@ struct AppState {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            env::var("RUST_LOG").unwrap_or_else(|_| "info,server=debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
-    let username = env::var("AUTH_USERNAME").unwrap_or_else(|_| {
-        eprintln!("WARNING: AUTH_USERNAME not set, using default 'admin'");
-        "admin".to_string()
-    });
-
-    let password = env::var("AUTH_PASSWORD").unwrap_or_else(|_| {
-        eprintln!("WARNING: AUTH_PASSWORD not set, using default 'password'");
-        "password".to_string()
-    });
+    let username = env::var("AUTH_USERNAME").expect("AUTH_USERNAME not set");
+    let password = env::var("AUTH_PASSWORD").expect("AUTH_PASSWORD not set");
 
     let message_path = PathBuf::from(MESSAGE_FILE);
 
@@ -64,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
 
-    println!("Server running on http://0.0.0.0:3000");
+    info!("Server running on http://0.0.0.0:3000");
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -80,17 +81,20 @@ async fn auth_middleware(
         .get(header::AUTHORIZATION)
         .and_then(|h| h.to_str().ok());
 
-    if let Some(auth_value) = auth_header {
-        if auth_value.starts_with("Basic ") {
-            let encoded = &auth_value[6..];
-            if let Ok(decoded) = BASE64.decode(encoded) {
-                if let Ok(credentials) = String::from_utf8(decoded) {
-                    let parts: Vec<&str> = credentials.splitn(2, ':').collect();
-                    if parts.len() == 2 && parts[0] == state.username && parts[1] == state.password
-                    {
-                        return next.run(req).await;
-                    }
-                }
+    if let Some(auth_value) = auth_header
+        && let Some(encoded) = auth_value.strip_prefix("Basic ")
+        && let Ok(decoded) = BASE64.decode(encoded)
+        && let Ok(credentials) = String::from_utf8(decoded)
+    {
+        let parts: Vec<&str> = credentials.splitn(2, ':').collect();
+        if parts.len() == 2 {
+            if parts[0] == state.username && parts[1] == state.password {
+                return next.run(req).await;
+            } else {
+                warn!(
+                    "Failed authentication attempt - username: '{}', password: '{}'",
+                    parts[0], parts[1]
+                );
             }
         }
     }
@@ -104,6 +108,7 @@ async fn auth_middleware(
 
 async fn get_message(State(state): State<AppState>) -> String {
     let message = state.message.read().await;
+    debug!("Message read: {}", message);
     message.clone()
 }
 
@@ -117,98 +122,98 @@ async fn show_form(State(state): State<AppState>) -> Html<String> {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Update Message</title>
     <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
+            font-family: monospace;
+            background: #000;
+            color: #fff;
             padding: 20px;
-            background: #f5f5f5;
+            min-height: 100vh;
         }}
         .container {{
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
         }}
         h1 {{
-            margin-top: 0;
-            color: #333;
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
         }}
         form {{
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
         }}
         label {{
-            font-weight: 600;
-            color: #555;
+            display: block;
+            margin-bottom: 5px;
+            color: #999;
         }}
         input, textarea {{
+            width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            background: #000;
+            color: #fff;
+            border: 1px solid #333;
+            font-family: monospace;
             font-size: 14px;
-            font-family: inherit;
+        }}
+        input:focus, textarea:focus {{
+            outline: none;
+            border-color: #666;
         }}
         textarea {{
             resize: vertical;
             min-height: 100px;
         }}
         button {{
-            padding: 12px 20px;
-            background: #007bff;
-            color: white;
+            padding: 10px 20px;
+            background: #fff;
+            color: #000;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 600;
+            font-family: monospace;
             cursor: pointer;
+            width: fit-content;
         }}
         button:hover {{
-            background: #0056b3;
+            background: #ccc;
         }}
         .char-count {{
             text-align: right;
             font-size: 12px;
             color: #666;
-            margin-top: -10px;
+            margin-top: 5px;
         }}
         .current {{
-            background: #f8f9fa;
+            background: #000;
             padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            border-left: 4px solid #007bff;
+            border: 1px solid #333;
+            margin-bottom: 30px;
         }}
         .current-label {{
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 8px;
+            color: #999;
+            margin-bottom: 10px;
         }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Update Message</h1>
+        <h1>update message</h1>
 
         <div class="current">
-            <div class="current-label">Current Message:</div>
+            <div class="current-label">current:</div>
             <div>{}</div>
         </div>
 
         <form method="POST" action="/form">
             <div>
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-
-            <div>
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-
-            <div>
-                <label for="message">Message (max 144 characters):</label>
+                <label for="message">message (max 144 characters)</label>
                 <textarea
                     id="message"
                     name="message"
@@ -221,7 +226,7 @@ async fn show_form(State(state): State<AppState>) -> Html<String> {
                 </div>
             </div>
 
-            <button type="submit">Update Message</button>
+            <button type="submit">update</button>
         </form>
     </div>
 
@@ -243,27 +248,16 @@ async fn show_form(State(state): State<AppState>) -> Html<String> {
 
 #[derive(Deserialize)]
 struct MessageForm {
-    username: String,
-    password: String,
     message: String,
 }
 
 async fn update_message(State(state): State<AppState>, Form(form): Form<MessageForm>) -> Response {
-    // Verify credentials
-    if form.username != state.username || form.password != state.password {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Html("<h1>Invalid credentials</h1><a href=\"/form\">Try again</a>"),
-        )
-            .into_response();
-    }
-
     // Validate message length
     if form.message.len() > MAX_MESSAGE_LENGTH {
         return (
             StatusCode::BAD_REQUEST,
             Html(format!(
-                "<h1>Message too long</h1><p>Maximum {} characters allowed</p><a href=\"/form\">Try again</a>",
+                "<style>body{{font-family:monospace;background:#000;color:#fff;padding:20px;}}a{{color:#fff;}}</style><h1>message too long</h1><p>maximum {} characters allowed</p><a href=\"/form\">try again</a>",
                 MAX_MESSAGE_LENGTH
             )),
         )
@@ -277,7 +271,7 @@ async fn update_message(State(state): State<AppState>, Form(form): Form<MessageF
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Html(format!(
-                "<h1>Error saving message</h1><p>{}</p><a href=\"/form\">Try again</a>",
+                "<style>body{{font-family:monospace;background:#000;color:#fff;padding:20px;}}a{{color:#fff;}}</style><h1>error saving message</h1><p>{}</p><a href=\"/form\">try again</a>",
                 e
             )),
         )
@@ -286,7 +280,12 @@ async fn update_message(State(state): State<AppState>, Form(form): Form<MessageF
 
     // Update in-memory state
     let mut message = state.message.write().await;
-    *message = trimmed_message;
+    let old_message = message.clone();
+    *message = trimmed_message.clone();
+    info!(
+        "Message changed from '{}' to '{}'",
+        old_message, trimmed_message
+    );
 
     Html(
         r#"<!DOCTYPE html>
@@ -296,38 +295,36 @@ async fn update_message(State(state): State<AppState>, Form(form): Form<MessageF
     <title>Message Updated</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
+            font-family: monospace;
+            background: #000;
+            color: #fff;
             padding: 20px;
-            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
         }
         .success {
-            background: #d4edda;
-            color: #155724;
+            border: 1px solid #333;
             padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #c3e6cb;
+            margin-bottom: 20px;
         }
         a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
+            color: #fff;
             text-decoration: none;
-            border-radius: 4px;
+            padding: 10px 20px;
+            background: #fff;
+            color: #000;
+            display: inline-block;
         }
         a:hover {
-            background: #0056b3;
+            background: #ccc;
         }
     </style>
 </head>
 <body>
     <div class="success">
-        <h1>✓ Message Updated Successfully!</h1>
+        <h1>message updated</h1>
     </div>
-    <a href="/form">Update Another Message</a>
+    <a href="/form">update again</a>
 </body>
 </html>"#,
     )
