@@ -5,3 +5,8 @@ deploy:
     docker build --progress=plain -t retro-cube-os . && docker run --rm -v "$(pwd)/build:/output" retro-cube-os
     ssh "$PI_USER@$PI_IP" 'rm /home/pi/os || true'
     scp build/os "$PI_USER@$PI_IP:/home/pi/os"
+
+run-remote:
+    @echo 'Deploy and run it on the Pi'
+    just deploy
+    ssh "$PI_USER@$PI_IP" './os'

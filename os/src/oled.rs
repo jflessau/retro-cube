@@ -50,7 +50,7 @@ pub fn render() -> Result<()> {
     // setup display
 
     let mut display: GraphicsMode<_> = Builder::new()
-        .with_rotation(DisplayRotation::Rotate180)
+        .with_rotation(DisplayRotation::Rotate0)
         .connect(di)
         .into();
 
