@@ -1,28 +1,28 @@
 use anyhow::{Context, Result};
 use log::trace;
 use reqwest;
-use serde::Deserialize;
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct QuoteData {
-    #[serde(rename = "quoteText")]
-    pub text: String,
-    #[serde(rename = "quoteAuthor")]
-    pub author: String,
-}
+use std::env;
 
 pub fn fetch() -> Result<String> {
-    let url = "http://api.forismatic.com/api/1.0/?method=getQuote&format=json&lang=en";
-    let response = reqwest::blocking::get(url).context("fails to fetch quote data")?;
-    let quote: QuoteData = response.json().context("fails to parse quote data")?;
-    trace!("quote data {quote:#?}",);
+    let url = env::var("MESSAGE_URL").context("MESSAGE_URL env var not set")?;
+    let username = env::var("MESSAGE_USERNAME").context("MESSAGE_USERNAME env var not set")?;
+    let password = env::var("MESSAGE_PASSWORD").context("MESSAGE_PASSWORD env var not set")?;
 
-    let text = quote.text.trim();
-    let author = if quote.author.trim().is_empty() {
-        "???".to_string()
-    } else {
-        quote.author.trim().to_string()
-    };
+    trace!("fetching message from {}", url);
 
-    Ok(format!("{text} | by {author}"))
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(&url)
+        .basic_auth(username, Some(password))
+        .send()
+        .context("failed to fetch message")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!("failed to fetch message: status {}", response.status());
+    }
+
+    let text = response.text().context("failed to read response text")?;
+    trace!("fetched message: {}", text);
+
+    Ok(text.trim().to_string())
 }

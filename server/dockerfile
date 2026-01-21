@@ -1,0 +1,23 @@
+FROM rust:latest as builder
+
+WORKDIR /usr/src/server
+
+# install system dependencies
+
+RUN apt update
+RUN apt install -y musl-tools
+
+# build
+
+RUN rustup target add aarch64-unknown-linux-musl
+COPY . .
+
+ENV SQLX_OFFLINE=true
+
+RUN cargo install --target aarch64-unknown-linux-musl --path .
+
+# use multi-stage build to reduce image size
+
+FROM alpine:latest
+COPY --from=builder /usr/local/cargo/bin/server .
+ENTRYPOINT ["./server"]
