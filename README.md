@@ -4,7 +4,7 @@
 
 A 3D printable housing for a Raspberry Pi Zero W, an OLED display, and a rotary encoder.
 
-## Features
+## 🌟 Features
 
 Use the dial to switch between views:
 
@@ -15,7 +15,9 @@ Use the dial to switch between views:
 
 The server code is also included in this repo.
 
-## Hardware
+## 🔨 How to build one
+
+### Hardware
 
 Aside from a Pi Zero W2 you need:
 
@@ -23,14 +25,14 @@ Aside from a Pi Zero W2 you need:
 - `1x` GIAK KY-040 Rotary Encoder
 - `12x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
 
-STL files for the case can be found in `./3d`. Note that you might need a little glue to properly attach the knob to the rotary encoder.
+STL files for 3D printing the case can be found in `./3d`. Note that you might need a little glue to properly attach the knob to the rotary encoder.
 
-### Wiring
+#### Wiring
 
 This is for the Raspberry Pi 3B+ and Zero 2 W. Other models might have a different pinout.
 Consult the manual for both the Pi and the OLED display for your specific Pi model.
 
-#### OLED Display
+OLED Display:
 
 | Pi (physical pin) | OLED pin |
 | ----------------- | -------- |
@@ -42,7 +44,7 @@ Consult the manual for both the Pi and the OLED display for your specific Pi mod
 | 23                | SCK      |
 | 24                | CS       |
 
-#### Rotary Encoder
+Rotary Encoder:
 
 | Pi (physical pin) | Rotary encoder pin |
 | ----------------- | ------------------ |
@@ -52,22 +54,29 @@ Consult the manual for both the Pi and the OLED display for your specific Pi mod
 | 10                | DT                 |
 | 8                 | SW                 |
 
-## Software
+### Software
 
-The software code running on the Pi is located in `./os`.
+The code running on the Pi is located in `./os`.
 The message server is located in `./server`.
 
-### Build & Deploy to Raspberry Pi
+#### Server
 
-#### Requirements
+The server serves the text message for the pi and a web form to update the text message. You can run it on the pi or any other machine the pi can reach.
 
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Just](https://github.com/casey/just) (can be installed with `cargo install just`)
-- [Docker](https://docker.com) (optional)
+To run it, rename `./server/.env.example` to `./server/.env` and set the following variables:
 
-#### Run the os service on your Pi
+| Env var       | Description                                                                  |
+| ------------- | ---------------------------------------------------------------------------- |
+| AUTH_USERNAME | Username for basic auth. Use the same here as for MESSAGE_USERNAME in `./os` |
+| AUTH_PASSWORD | Password for basic auth. Use the same here as for MESSAGE_PASSWORD in `./os` |
 
-Rename `./os/.env.example` to `./os/.env` and set the following variables:
+Start it with `cargo run`. It serves on `http://localhost:3000`.
+
+#### Os
+
+The os service runs on the pi, controls the display, reads inputs from the rotary encoder and connects to the server to fetch the current message.
+
+To run it on the pi, rename `./os/.env.example` to `./os/.env` and set the following variables:
 
 | Env var                  | Description                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------- |
@@ -81,32 +90,14 @@ Rename `./os/.env.example` to `./os/.env` and set the following variables:
 | WEATHER_LAT              | Latitude of the location to get the weather for, e.g. `50.2`                    |
 | WEATHER_LON              | Longitude of the location to get the weather for, e.g. `12.9`                   |
 
-Then run `just deploy` to build the binary and copy it to `/home/pi/os` on the Pi. Use ssh to get into the Pi and execute the os service, which should be in `/home/<your pi username>/os` by running, for example, `./home/pi/os`.
+Then run `just run-remote` which connects via ssh to your pi using the `PI_USER` and `PI_IP` variables. It builds an executable binary within docker on your machine, copies it to your pi and runs it. This step will be much nicer when you have (keybased) paswordless ssh setup with your pi.
 
-If available, this will use passwordless ssh login via ssh keys. Otherwise, you will be prompted for the password.
-
-To skip the part of manually starting it on the Pi, use `just run-remote`. This will build the code, copy it to the Pi, and run it.
-
-#### Run the server
-
-The server in `./server` is used by the Pi to fetch text messages and it exposes a web form to update the message. Both endpoints are protected by basic auth.
-
-First rename `./server/.env.example` to `./server/.env` and set the following variables:
-
-| Env var       | Description                                                                  |
-| ------------- | ---------------------------------------------------------------------------- |
-| AUTH_USERNAME | Username for basic auth. Use the same here as for MESSAGE_USERNAME in `./os` |
-| AUTH_PASSWORD | Password for basic auth. Use the same here as for MESSAGE_PASSWORD in `./os` |
-
-And run the server with `cargo run`. You can also build an executable binary with `cargo build --release`, after which the binary is in `target/release/`. Or you can build a Docker container with `docker build -t retro-cube-server .`.
-
-### Development
+## Development
 
 Use `cargo run` for both the os and the server to run the application on your local machine.
-
 For the os service, instead of drawing to the real OLED, this will render the OLED's content into a simulator running in a separate window.
 
-#### macOS
+### macOS
 
 On macOS, you likely need to install `sdl2` to run the `./os` service, e.g. with Homebrew:
 
