@@ -1,6 +1,11 @@
 # retro-cube
 
-<img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="demo.jpg" width="440px"/>
+<img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="img/demo.jpg" width="440px"/>
+
+<details>
+  <summary><b>Video of the cube in action</b></summary>
+  <img alt="Demo video of the retro cube in action." src="img/demo.mp4" width="440px"/>
+</details>
 
 A 3D printable housing for a Raspberry Pi Zero W, an OLED display, and a rotary encoder.
 
@@ -19,13 +24,23 @@ The server code is also included in this repo.
 
 ### Hardware
 
-Aside from a Pi Zero W2 you need:
+Here is all you need:
 
-- `1x` SSD1309 OLED display, **SPI**-version, 128x64, 2.4 inch, Pins at the bottom of the display, not left or right. 
+- `1x` Rasperry Pi Zero W
+- `1x` SSD1309 OLED display, **SPI**-version, 128x64, 2.4 inch, Pins at the bottom of the display, not left or right.
 - `1x` GIAK KY-040 Rotary Encoder
 - `12x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
+- `8x` M3 screws (5mm head diameter, 3mm head height, 3mm thread diameter, 7,5mm thread length)
+- `8x` M3 inserts (see below)
+- a drop of glue to attach the 3d printed knob to the rotary encoder
+- 3D printer and about 80 g of filament
 
-STL files for 3D printing the case can be found in `./3d`. Note that you might need a little glue to properly attach the knob to the rotary encoder.
+<details>
+  <summary><b>M3 inserts</b></summary>
+  <img alt="M3 screw inserts." src="img/m3-inserts.jpg" width="440px"/>
+</details>
+
+STL files for 3D printing the case can be found in `./3d/stl`.
 
 #### Wiring
 
