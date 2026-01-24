@@ -29,7 +29,7 @@ STL files for 3D printing the case can be found in `./3d`. Note that you might n
 
 #### Wiring
 
-This is for the Raspberry Pi 3B+ and Zero 2 W. Other models might have a different pinout.
+This is for the Zero 2 W. Other models might have a different pinout.
 Consult the manual for both the Pi and the OLED display for your specific Pi model.
 
 OLED Display:
@@ -90,7 +90,7 @@ To run it on the pi, rename `./os/.env.example` to `./os/.env` and set the follo
 | WEATHER_LAT              | Latitude of the location to get the weather for, e.g. `50.2`                    |
 | WEATHER_LON              | Longitude of the location to get the weather for, e.g. `12.9`                   |
 
-Then run `just run-remote` which connects via ssh to your pi using the `PI_USER` and `PI_IP` variables. It builds an executable binary within docker on your machine, copies it to your pi and runs it. This step will be much nicer when you have (keybased) paswordless ssh setup with your pi.
+Then run `just run-remote` which connects via ssh to your pi using the `PI_USER` and `PI_IP` variables. It builds an executable binary within docker on your machine, copies it to your pi and runs it. This step will be much nicer when you have (keybased) passwordless ssh setup with your pi.
 
 ## Development
 
