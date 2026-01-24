@@ -25,10 +25,12 @@ Here is all you need:
 - `1x` SSD1309 OLED display, **SPI**-version, 128x64, 2.4 inch, Pins at the bottom of the display, not left or right.
 - `1x` GIAK KY-040 Rotary Encoder
 - `12x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
-- `8x` M3 screws (5mm head diameter, 3mm head height, 3mm thread diameter, 7,5mm thread length)
+- `8x` M3 screws (5 mm head diameter, 3 mm head height, 3 mm thread diameter, 7,5 mm thread length)
 - `8x` M3 inserts (see below)
+- `5x` Screws to mount Pi and rotary encoder (2,5 mm thread diameter, 3-6 mm head diameter, self-tapping)
 - a drop of glue to attach the 3d printed knob to the rotary encoder
 - 3D printer and about 80 g of filament
+- something to heat up the M3 inserts before inserting, e.g. a soldering iron
 
 STL files for 3D printing the case can be found in `./3d/stl`.
 
