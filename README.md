@@ -21,7 +21,7 @@ The server code is also included in this repo.
 
 Aside from a Pi Zero W2 you need:
 
-- `1x` SSD1306 OLED display, **SPI**-version, 128x64, 2.4 inch
+- `1x` SSD1309 OLED display, **SPI**-version, 128x64, 2.4 inch, Pins at the bottom of the display, not left or right. 
 - `1x` GIAK KY-040 Rotary Encoder
 - `12x` female-to-female jumper wires to connect the OLED to the Pi's GPIO pins
 
