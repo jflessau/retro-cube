@@ -2,11 +2,6 @@
 
 <img alt="A rectangular 3D printed beige case for a OLED display showing the current time." src="img/demo.jpg" width="440px"/>
 
-<details>
-  <summary><b>Video of the cube in action</b></summary>
-  <img alt="Demo video of the retro cube in action." src="img/demo.mp4" width="440px"/>
-</details>
-
 A 3D printable housing for a Raspberry Pi Zero W, an OLED display, and a rotary encoder.
 
 ## 🌟 Features
@@ -35,39 +30,47 @@ Here is all you need:
 - a drop of glue to attach the 3d printed knob to the rotary encoder
 - 3D printer and about 80 g of filament
 
-<details>
-  <summary><b>M3 inserts</b></summary>
-  <img alt="M3 screw inserts." src="img/m3-inserts.jpg" width="440px"/>
-</details>
-
 STL files for 3D printing the case can be found in `./3d/stl`.
 
-#### Wiring
+<details>
+<summary><b>M3 inserts</b></summary>
+<img src="/img/m3-inserts.jpeg" max-width="800px"/>
+</details>
+
+### Wiring
 
 This is for the Zero 2 W. Other models might have a different pinout.
 Consult the manual for both the Pi and the OLED display for your specific Pi model.
 
-OLED Display:
+<details>
+<summary><b>OLED Display</b></summary>
+<p>
+  [Physical pin on the pi -> OLED pin]
+  <ul>
+    <li>6 -> GND</li>
+    <li>2 -> VCC</li>
+    <li>5 -> RES</li>
+    <li>19 -> SDA</li>
+    <li>3 -> DC</li>
+    <li>23 -> SCK</li>
+    <li>24 -> CS</li>
+  </ul>
+</p>
+</details>
 
-| Pi (physical pin) | OLED pin |
-| ----------------- | -------- |
-| 6                 | GND      |
-| 2                 | VCC      |
-| 5                 | RES      |
-| 19                | SDA      |
-| 3                 | DC       |
-| 23                | SCK      |
-| 24                | CS       |
-
-Rotary Encoder:
-
-| Pi (physical pin) | Rotary encoder pin |
-| ----------------- | ------------------ |
-| 39                | GND                |
-| 1                 | VCC                |
-| 36                | CLK                |
-| 10                | DT                 |
-| 8                 | SW                 |
+<details>
+<summary><b>Rotary encoder</b></summary>
+<p>
+  [Physical pin on the pi -> Encoder pin]
+  <ul>
+    <li>39 -> GND</li>
+    <li>1 -> VCC</li>
+    <li>36 -> CLK</li>
+    <li>10 -> DT</li>
+    <li>8 -> SW</li>
+  </ul>
+</p>
+</details>
 
 ### Software
 
@@ -109,7 +112,7 @@ Then run `just run-remote` which connects via ssh to your pi using the `PI_USER`
 
 ## Development
 
-Use `cargo run` for both the os and the server to run the application on your local machine.
+In case you want to tinker with the software use `cargo run` for both the os and the server to run the application on your local machine.
 For the os service, instead of drawing to the real OLED, this will render the OLED's content into a simulator running in a separate window.
 
 ### macOS
