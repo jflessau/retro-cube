@@ -9,6 +9,9 @@ target
 
 # os
 os/target
+os/build/*
+!os/build/.gitkeep
+
 
 # server
 server/target
