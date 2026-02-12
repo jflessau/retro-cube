@@ -236,6 +236,24 @@ async fn show_form(State(state): State<AppState>) -> Html<String> {
             const charCount = document.getElementById('charCount');
             charCount.textContent = textarea.value.length;
         }}
+
+        function filterInput(event) {{
+            const textarea = event.target;
+            const allowedPattern = /[a-zA-Z0-9 !,.\-#+?;:_'*\/"()]/g;
+            const filtered = textarea.value.match(allowedPattern);
+            const newValue = filtered ? filtered.join('') : '';
+
+            if (newValue !== textarea.value) {{
+                const cursorPos = textarea.selectionStart;
+                textarea.value = newValue;
+                // Try to maintain cursor position
+                textarea.setSelectionRange(cursorPos - 1, cursorPos - 1);
+            }}
+
+            updateCharCount();
+        }}
+
+        document.getElementById('message').addEventListener('input', filterInput);
     </script>
 </body>
 </html>"#,

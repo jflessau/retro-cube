@@ -22,6 +22,20 @@ pub fn fetch() -> Result<String> {
 
     let text = response.text().context("failed to read response text")?;
     trace!("fetched message: {}", text);
+    // replace chars that are not in the font with ?
+    let text = text
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric()
+                || c.is_ascii_whitespace()
+                || "!.,-#+?;:_'*/\"()".contains(c)
+            {
+                c
+            } else {
+                '?'
+            }
+        })
+        .collect::<String>();
 
     Ok(text.trim().to_string())
 }
